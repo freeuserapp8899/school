@@ -1,58 +1,49 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const path = require('path');
 const app = express();
 
-// 1. Database Connection
-// This connects to your school.db file in the same folder
-const db = new sqlite3.Database('./school.db', (err) => {
-    if (err) {
-        console.error("Database opening error: ", err.message);
-    } else {
-        console.log("Connected to the SQLite database.");
-    }
+// 1. Cloud Database Connection
+// We use the Connection String you provided
+const pool = new Pool({
+  connectionString: "postgresql://postgres:[XCDo8J7nEBh0Rw42]@db.aubxrubqxdaxydqejxba.supabase.co:5432/postgres",
+  ssl: {
+    rejectUnauthorized: false // Required for Supabase/Render security
+  }
 });
 
 // 2. Middleware
-// This allows the server to read JSON data sent from your HTML form
 app.use(express.json());
-// This serves your index.html file automatically
-app.use(express.static('.'));
+app.use(express.static('.')); // Serves your index.html
 
-// 3. API Route: GET (Read)
-// This sends the list of students to your table
-app.get('/api/students', (req, res) => {
-    db.all("SELECT * FROM students", [], (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-            return;
-        }
-        res.json(rows);
-    });
+// 3. API: Get all students
+app.get('/api/students', async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM students ORDER BY id ASC");
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Error fetching students:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// 4. API Route: POST (Create)
-// This takes data from your form and saves it to school.db
-app.post('/api/students', (req, res) => {
+// 4. API: Add a student
+app.post('/api/students', async (req, res) => {
     const { name, age, grade } = req.body;
-    const sql = "INSERT INTO students (name, age, grade) VALUES (?, ?, ?)";
-    const params = [name, age, grade];
-    
-    db.run(sql, params, function(err) {
-        if (err) {
-            res.status(400).json({ error: err.message });
-            return;
-        }
-        res.json({
-            message: "success",
-            data: { id: this.lastID }
-        });
-    });
+    try {
+        const result = await pool.query(
+            "INSERT INTO students (name, age, grade) VALUES ($1, $2, $3) RETURNING *",
+            [name, age, grade]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error("Error adding student:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// 5. Smart Port Listener
-// Render uses process.env.PORT, your PC uses 3000
+// 5. Smart Port for Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running! Port: ${PORT}`);
+    console.log(`Cloud Engine Live on port ${PORT}`);
 });
