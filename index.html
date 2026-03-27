@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Manager</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+        .form-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #218838; }
+        table { width: 80%; background: white; border-collapse: collapse; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; color: #333; }
+        th { background: #007bff; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        <h2>Add New Student</h2>
+        <input type="text" id="name" placeholder="Name">
+        <input type="number" id="age" placeholder="Age">
+        <input type="text" id="grade" placeholder="Grade">
+        <button onclick="addStudent()">Add Student</button>
+    </div>
+
+    <table>
+        <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Grade</th></tr></thead>
+        <tbody id="student-list"></tbody>
+    </table>
+
+    <script>
+        // Load data when page opens
+        async function loadStudents() {
+            const res = await fetch('/api/students');
+            const data = await res.json();
+            const list = document.getElementById('student-list');
+            list.innerHTML = data.map(s => `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.age}</td><td>${s.grade}</td></tr>`).join('');
+        }
+
+        // Send new student to server
+        async function addStudent() {
+            const name = document.getElementById('name').value;
+            const age = document.getElementById('age').value;
+            const grade = document.getElementById('grade').value;
+
+            await fetch('/api/students', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, age, grade })
+            });
+
+            // Clear inputs and refresh table
+            document.getElementById('name').value = '';
+            document.getElementById('age').value = '';
+            document.getElementById('grade').value = '';
+            loadStudents();
+        }
+
+        loadStudents();
+    </script>
+</body>
+</html>
